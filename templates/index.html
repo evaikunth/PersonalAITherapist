@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Therapist.io</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+        .main-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 100px;
+            margin-top: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+        .therapist-section {
+            flex: 0 0 300px;
+            display: flex;
+            justify-content: center;
+        }
+        .chat-section {
+            flex: 0 0 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .therapist-image {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .chat-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+        }
+        .chat-history {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+        }
+        .message.user .bubble {
+            background: #007bff;
+            color: #fff;
+            margin-left: auto;
+        }
+        .message.bot .bubble {
+            background: #e9ecef;
+            color: #222;
+            margin-right: auto;
+        }
+        .bubble {
+            padding: 12px 18px;
+            border-radius: 18px;
+            max-width: 85%;
+            min-width: 100px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            white-space: pre-wrap;
+            line-height: 1.4;
+            overflow: visible;
+            max-height: none;
+            display: block;
+        }
+        .input-area {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-top: 1px solid #eee;
+        }
+        .input-area input[type="text"] {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            outline: none;
+        }
+        .input-area button, .input-area .mic-btn {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-left: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+        .input-area .mic-btn.listening {
+            background: #28a745;
+        }
+        #error {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="margin-top:32px; text-align:center; font-family:inherit;">Your Personal AI Therapist</h2>
+    <div class="main-container">
+        <div class="therapist-section">
+            <img src="{{ url_for('static', filename='therapist.png') }}" alt="Therapist" class="therapist-image">
+        </div>
+        <div class="chat-section">
+            <div class="chat-container">
+                <div class="chat-history" id="chatHistory"></div>
+                <form class="input-area" id="chatForm" autocomplete="off">
+                    <input type="text" id="userInput" placeholder="Type your message..." required />
+                    <button type="submit" title="Send">&#9658;</button>
+                    <button type="button" class="mic-btn" id="micBtn" title="Speak"><span id="micIcon">🎤</span></button>
+                </form>
+            </div>
+            <div id="error"></div>
+        </div>
+    </div>
+    <script>
+        const chatHistory = document.getElementById('chatHistory');
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const micBtn = document.getElementById('micBtn');
+        const micIcon = document.getElementById('micIcon');
+        const errorDiv = document.getElementById('error');
+
+        function addMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = text.replace(/\n/g, '<br>');
+            msgDiv.appendChild(bubble);
+            chatHistory.appendChild(msgDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utter = new window.SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(utter);
+            }
+        }
+
+        const userHistory = [];
+
+        chatForm.onsubmit = async (e) => {
+            e.preventDefault();
+            errorDiv.textContent = '';
+            const text = userInput.value.trim();
+            if (!text) return;
+            addMessage(text, 'user');
+            userInput.value = '';
+
+            // Add to user history, keep only last 3
+            userHistory.push(text);
+            if (userHistory.length > 3) userHistory.shift();
+
+            try {
+                const response = await fetch('/speech-to-speech', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: userHistory })
+                });
+                if (!response.ok) {
+                    const err = await response.json();
+                    errorDiv.textContent = err.error || 'Unknown error';
+                    return;
+                }
+                const data = await response.json();
+                addMessage(data.response, 'bot');
+                speak(data.response);
+            } catch (err) {
+                errorDiv.textContent = 'Request failed: ' + err;
+            }
+        };
+
+        // Speech-to-text
+        let recognition;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                micBtn.classList.add('listening');
+                micIcon.textContent = '🔴';
+            };
+            recognition.onend = () => {
+                micBtn.classList.remove('listening');
+                micIcon.textContent = '🎤';
+            };
+            recognition.onerror = (event) => {
+                errorDiv.textContent = 'Speech recognition error: ' + event.error;
+            };
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                chatForm.dispatchEvent(new Event('submit'));
+            };
+        } else {
+            micBtn.disabled = true;
+            micBtn.title = 'Speech recognition not supported';
+        }
+
+        micBtn.onclick = () => {
+            if (recognition) {
+                recognition.start();
+            }
+        };
+    </script>
+</body>
+</html>
