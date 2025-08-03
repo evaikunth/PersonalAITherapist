@@ -21,8 +21,9 @@ An ML and AI powered speech therapist web application that provides empathetic r
 
 1. **Clone the Repository**
 
-   git clone <your-repo-url>
-   cd AI-Speech-Therapist
+   -git clone <your-repo-url>
+   
+   -cd AI-Speech-Therapist
 
 2. **Install Dependencies**
 
