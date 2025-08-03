@@ -27,22 +27,22 @@ An ML and AI powered speech therapist web application that provides empathetic r
 
 2. **Install Dependencies**
 
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
+   -python3 -m venv venv
+   -source venv/bin/activate  # On Windows: venv\Scripts\activate
+   -pip install -r requirements.txt
 
 3. **Set up Environment Variables**
    - Get a free API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
    - Create a `.env` file in the project root:
-   ```
-   GEMINI_API_KEY=your_api_key_here
-   ```
+
+   -GEMINI_API_KEY=your_api_key_here
+
 
 4. **Run the Application**
  
-   python app.py
+   -python app.py
 
-   Navigate to `http://localhost:5000` in your browser.
+   -Navigate to `http://localhost:5000` in your browser.
 
 ## Project Structure
 
